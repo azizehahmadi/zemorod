@@ -30,3 +30,12 @@ class CanEditAndRegisterProfile(permissions.BasePermission):
 
 
 
+class CanRegisterOrder(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        if request.user.profile.role == 'ADMIN':
+            return True
+        elif request.user.profile.role in ['SELLER', 'BUYER']:
+            return True
+
+        return False

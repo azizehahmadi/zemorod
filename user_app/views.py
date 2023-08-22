@@ -161,7 +161,3 @@ class ProfileUser(ModelViewSet):
             return Response({'msg': 'user deleted'}, status=status.HTTP_204_NO_CONTENT)
         return Response({'profile not found'}, status=status.HTTP_404_NOT_FOUND)
 
-
-
-
-

@@ -2,13 +2,16 @@ import datetime
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, viewsets
-from .models import Order, OrderDetail
+from rest_framework import status, viewsets, generics
+from .models import Order, OrderDetail, RegisterOrder
 from product_app.models import Product
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from .serializers import ProductToOrderSerializers, OrderSerializer
+from .serializers import ProductToOrderSerializers, OrderSerializer, RegisterOrderSerializer
 from rest_framework.decorators import action
+from user_app.permissions import CanRegisterOrder, IsAdminUser
+from user_app.models import Profile, User
+
 class AddProductToBasket(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
@@ -121,3 +124,48 @@ class ChangeStatusOrderAfterPayment(viewsets.ModelViewSet):
         return Response({'msg': 'No pending order found for payment'},
                         status=status.HTTP_400_BAD_REQUEST)
 
+
+class RegisterOrderView(viewsets.ModelViewSet):
+
+
+    serializer_class = RegisterOrderSerializer
+    queryset = RegisterOrder.objects.all()
+    permission_classes = [CanRegisterOrder]
+
+    def create(self, request, *args, **kwargs):
+        try:
+            profile = request.user.profile.id
+        except Profile.DoesNotExist:
+            return Response({'msg': 'profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
+
+        request.data['user_profile'] = request.user.profile.id
+        serializer = RegisterOrderSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.queryset.all()
+        if queryset:
+            serializer = RegisterOrderSerializer(queryset, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        else:
+            return Response({'msg': 'not'}, status=status.HTTP_200_OK)
+
+
+class RegisterOrderByAdmin(APIView):
+    def get(self, request, pk):
+        try:
+            user = User.objects.get(id=pk)
+            profile = user.profile
+        except User.DoesNotExist:
+            return Response({'msg': 'User does not exist'}, status=status.HTTP_404_NOT_FOUND)
+        except Profile.DoesNotExist:
+            return Response({'msg': 'Profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
+
+        queryset = RegisterOrder.objects.filter(user_profile=profile)
+        serializer = RegisterOrderSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
