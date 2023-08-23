@@ -132,6 +132,13 @@ class RegisterOrderView(viewsets.ModelViewSet):
     queryset = RegisterOrder.objects.all()
     permission_classes = [CanRegisterOrder]
 
+    def get_permissions(self):
+        if self.action == 'create':
+            permission_classes = [CanRegisterOrder]
+        else:
+            permission_classes = [IsAdminUser]
+        return [permission() for permission in permission_classes]
+
     def create(self, request, *args, **kwargs):
         try:
             profile = request.user.profile.id
